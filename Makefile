@@ -1,39 +1,30 @@
-include artifacts/Makefile
+include qa/Makefile
 
-# Run unit tests
-test:
-	./vendor/bin/phpunit -c phpunit.xml.dist
+CURRENT_TAG=$(shell git tag | tail -n 2 | head -n 1)
 
-# Codesniffer check
-phpcs:
-	./vendor/bin/phpcs src/ tests/ --extensions=php -n
+.PHONY: build
+build: build-phar
+	@#TODO: docker build --pull -t phpmetrics/phpmetrics:${CURRENT_TAG}
+	@docker build --pull -t phpmetrics/phpmetrics:3.0.0 .
 
-# Codesniffer fix
-phpcbf:
-	./vendor/bin/phpcbf src/ tests/ --extensions=php -n
+# Build phar
+.PHONY: build-phar
+build-phar: test phpcs
+	@# Remove the phar that must be replaced by the new release.
+	@rm -f releases/phpmetrics.phar
+	@mkdir -p releases
+	@echo Copying sources
+	@mkdir -p /tmp/phpmetrics-build
+	@cp * -R /tmp/phpmetrics-build
+	@rm -Rf /tmp/phpmetrics-build/vendor /tmp/phpmetrics-build/composer.lock
 
-# Publish new release. Usage:
-#   make tag VERSION=(major|minor|patch)
-# You need to install https://github.com/flazz/semver/ before
-tag:
-	@semver inc $(VERSION)
-	@echo "New release: `semver tag`"
-	@echo Releasing sources
-	@sed -i -r "s/(v[0-9]+\.[0-9]+\.[0-9]+)/`semver tag`/g" \
-		.github/ISSUE_TEMPLATE/Bug_report.md \
-		.github/ISSUE_TEMPLATE/Feature_request.md \
-		src/functions.php \
-		artifacts/debian/control \
-		artifacts/bintray.json \
-		doc/installation.md
-	@sed -i -r "s/([0-9]{4}\-[0-9]{2}\-[0-9]{2})/`date +%Y-%m-%d`/g" artifacts/bintray.json
-	@make changelog-deb
+	@echo Building php image that will build the phar
+	@docker build --pull -t pharbuilder_phpmetrics -f ./artifacts/phar/Dockerfile . >/dev/null
 
+	@echo Installing dependencies
+	@cd /tmp/phpmetrics-build && docker run --rm -it -u$(shell id -u):0 -v $$PWD:/app -w /app --entrypoint=composer pharbuilder_phpmetrics update --no-dev --optimize-autoloader --prefer-dist
 
-# Tag git with last release
-release: build
-	git add .semver .github/ISSUE_TEMPLATE/Bug_report.md .github/ISSUE_TEMPLATE/Feature_request.md src/functions.php doc/installation.md artifacts/* releases/*
-	git commit -S -m "releasing `semver tag`"
-	git tag -s `semver tag`
-	git push -u origin master
-	git push origin `semver tag`
+	@echo Building phar
+	@cd /tmp/phpmetrics-build && docker run --rm -it -u$(shell id -u):0 -v $$PWD:/app -w /app pharbuilder_phpmetrics php artifacts/phar/build.php
+	@cp /tmp/phpmetrics-build/releases/phpmetrics.phar releases/phpmetrics.phar
+	@rm -Rf /tmp/phpmetrics-build
