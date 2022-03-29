@@ -18,13 +18,7 @@ build-phar: test phpcs
 	@cp * -R /tmp/phpmetrics-build
 	@rm -Rf /tmp/phpmetrics-build/vendor /tmp/phpmetrics-build/composer.lock
 
-	@echo Building php image that will build the phar
-	@docker build --pull -t pharbuilder_phpmetrics -f ./artifacts/phar/Dockerfile . >/dev/null
-
-	@echo Installing dependencies
-	@cd /tmp/phpmetrics-build && docker run --rm -it -u$(shell id -u):0 -v $$PWD:/app -w /app --entrypoint=composer pharbuilder_phpmetrics update --no-dev --optimize-autoloader --prefer-dist
-
-	@echo Building phar
-	@cd /tmp/phpmetrics-build && docker run --rm -it -u$(shell id -u):0 -v $$PWD:/app -w /app pharbuilder_phpmetrics php artifacts/phar/build.php
+	@echo Installing dependencies and building phar
+	@cd /tmp/phpmetrics-build && docker run --rm -it -u$(shell id -u):0 -v $$PWD:/app -w /app phpmetrics_tools /bin/sh -c "composer update --no-dev --optimize-autoloader --prefer-dist && php artifacts/phar/build.php"
 	@cp /tmp/phpmetrics-build/releases/phpmetrics.phar releases/phpmetrics.phar
 	@rm -Rf /tmp/phpmetrics-build
