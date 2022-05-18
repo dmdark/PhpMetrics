@@ -34,6 +34,7 @@ foreach ($classes as $c) {
                         </tr>
                     <?php } ?>
                     </tbody>
+                </table>
             </div>
         </div>
     </div>
