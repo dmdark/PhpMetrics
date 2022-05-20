@@ -15,7 +15,7 @@ LOC
     Comment lines of code                       {$this->sum->cloc}
     Average volume                              {$this->avg->volume}
     Average comment weight                      {$this->avg->commentWeight}
-    Average intelligent content                 {$this->avg->commentWeight}
+    Average intelligent content                 {$this->avg->intelligentContent}
     Logical lines of code by class              {$this->locByClass}
     Logical lines of code by method             {$this->locByMethod}
 Object oriented programming
@@ -44,6 +44,8 @@ Complexity
     Average Weighted method count by class      {$this->avg->wmc}
     Average Relative system complexity          {$this->avg->relativeSystemComplexity}
     Average Difficulty                          {$this->avg->difficulty}
+    MaintainabilityIndex                        {$this->avg->mi}
+    MaintainabilityIndex Without Comments       {$this->avg->mIwoC}
 
 Bugs
     Average bugs by class                       {$this->avg->bugs}
